@@ -2,8 +2,6 @@ from pyPS4Controller.controller import Controller
 import time
 import threading
 
-#test
-
 class MyController(Controller):
     def __init__(self, **kwargs):
         Controller.__init__(self, **kwargs)
