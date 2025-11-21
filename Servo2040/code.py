@@ -34,8 +34,10 @@ class ServoBridge:
         elif cmd == "CENTER":
             self._servo.angle = CENTER_ANGLE
         else:
+            self._serial.write(f"ERR {cmd}\n".encode("utf-8"))
             print(f"Unknown command: {cmd}")
             return
+        self._serial.write(f"OK {cmd}\n".encode("utf-8"))
         print(f"Moved servo to {cmd.lower()}.")
 
     def loop(self):

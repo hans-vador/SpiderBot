@@ -1,5 +1,7 @@
 from pyPS4Controller.controller import Controller
 import serial
+import threading
+import time
 
 SERIAL_PORT = "/dev/ttyACM0"  # Adjust if your Servo 2040 enumerates differently.
 BAUD_RATE = 115200
@@ -8,9 +10,14 @@ class MyController(Controller):
     def __init__(self, serial_port=SERIAL_PORT, **kwargs):
         super().__init__(**kwargs)
         self.serial_port = serial_port
-        self.serial_conn = serial.Serial(serial_port, BAUD_RATE, timeout=0)
+        self.serial_conn = serial.Serial(serial_port, BAUD_RATE, timeout=0.1)
         self.current_command = None
-        self.send_command("CENTER")
+        self.desired_command = "CENTER"
+        self._command_lock = threading.Lock()
+        self.reader_thread = threading.Thread(target=self._serial_reader, daemon=True)
+        self.reader_thread.start()
+        self.movement_thread = threading.Thread(target=self._movement_loop, daemon=True)
+        self.movement_thread.start()
 
     def send_command(self, command: str):
         """
@@ -27,16 +34,40 @@ class MyController(Controller):
         except serial.SerialException as exc:
             print(f"Failed to talk to Servo 2040: {exc}")
 
+    def _movement_loop(self):
+        while True:
+            with self._command_lock:
+                target = self.desired_command
+            self.send_command(target)
+            time.sleep(0.05)
+
+    def _set_target_command(self, command: str):
+        with self._command_lock:
+            self.desired_command = command
+
+    def _serial_reader(self):
+        while True:
+            try:
+                line = self.serial_conn.readline()
+            except serial.SerialException as exc:
+                print(f"Servo 2040 serial read error: {exc}")
+                break
+            if not line:
+                continue
+            decoded = line.decode("utf-8", errors="replace").strip()
+            if decoded:
+                print(f"Servo2040 -> {decoded}")
+
     def on_L3_up(self, value):
         if value < -10000:
-            self.send_command("FORWARD")
+            self._set_target_command("FORWARD")
 
     def on_L3_down(self, value):
         if value > 10000:
-            self.send_command("BACK")
+            self._set_target_command("BACK")
 
     def on_L3_y_at_rest(self):
-        self.send_command("CENTER")
+        self._set_target_command("CENTER")
 
     # Empty methods for all other controls to silence them
     def on_x_press(self): pass
