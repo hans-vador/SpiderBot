@@ -61,10 +61,15 @@ class MyController(Controller):
     def on_L3_up(self, value):
         if value < -10000:
             self._set_target_command("FORWARD")
+        else: 
+            self._set_target_command("CENTER")
+
 
     def on_L3_down(self, value):
         if value > 10000:
             self._set_target_command("BACK")
+        else: 
+            self._set_target_command("CENTER")
 
     def on_L3_y_at_rest(self):
         self._set_target_command("CENTER")

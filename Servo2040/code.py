@@ -6,7 +6,7 @@ import usb_cdc
 from adafruit_motor import servo
 
 
-SERVO_PIN = board.GP0  # Servo output 1 on the Servo 2040
+SERVO_PIN = board.SERVO_1  # Servo output 1 on the Servo 2040
 PWM_FREQUENCY = 50
 PULSE_RANGE = (500, 2500)  # microseconds
 
