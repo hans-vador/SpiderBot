@@ -37,11 +37,6 @@ class IKEngine:
 
 
 class MyController(Controller):
-    # RME: Requirements - serial_port (optional, defaults to SERIAL_PORT), **kwargs for parent Controller
-    #      Modifies - Initializes self.serial_port, self.serial_conn, self.current_command, 
-    #                 self.desired_command, self._command_lock, and starts reader_thread and movement_thread
-    #      Effects - Creates serial connection to Servo 2040, initializes controller state, 
-    #                and starts background threads for serial reading and movement control
     def __init__(self, serial_port=SERIAL_PORT, **kwargs):
         self.y = 0
         self.z = 0
