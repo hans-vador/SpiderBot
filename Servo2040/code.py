@@ -1,62 +1,102 @@
 import time
-
 import board
 import pwmio
 import usb_cdc
 from adafruit_motor import servo
 
-
-SERVO_PIN = board.SERVO_1  # Servo output 1 on the Servo 2040
+# ---------------------------------------
+# Servo Setup
+# ---------------------------------------
 PWM_FREQUENCY = 50
 PULSE_RANGE = (500, 2500)  # microseconds
 
-FORWARD_ANGLE = 120
-BACK_ANGLE = 60
-CENTER_ANGLE = 90
+# Servo 1
+pwm1 = pwmio.PWMOut(board.SERVO_1, frequency=PWM_FREQUENCY)
+servo1 = servo.Servo(pwm1, min_pulse=PULSE_RANGE[0], max_pulse=PULSE_RANGE[1])
+
+# Servo 2
+pwm2 = pwmio.PWMOut(board.SERVO_2, frequency=PWM_FREQUENCY)
+servo2 = servo.Servo(pwm2, min_pulse=PULSE_RANGE[0], max_pulse=PULSE_RANGE[1])
+
+# ---------------------------------------
+# Serial Setup
+# ---------------------------------------
+serial = usb_cdc.data if usb_cdc.data else usb_cdc.console
+buffer = bytearray()
+
+print("IK Servo Bridge Ready")
+print("Expected packet format: S2:ANGLE,S3:ANGLE")
 
 
-class ServoBridge:
-    def __init__(self):
-        pwm = pwmio.PWMOut(SERVO_PIN, frequency=PWM_FREQUENCY)
-        self._servo = servo.Servo(pwm, min_pulse=PULSE_RANGE[0], max_pulse=PULSE_RANGE[1])
-        self._servo.angle = CENTER_ANGLE
-        # Prefer the data USB channel when enabled, otherwise use the default console.
-        self._serial = usb_cdc.data if usb_cdc.data else usb_cdc.console
-        self._buffer = bytearray()
-        print("Servo bridge ready. Send FORWARD/BACK/CENTER commands.")
+# ---------------------------------------
+# Helper: Apply angle safely
+# ---------------------------------------
+def set_servo(servo_obj, angle):
+    try:
+        angle = float(angle)
+        if angle < 0: angle = 0
+        if angle > 180: angle = 180
+        servo_obj.angle = angle
+        return True
+    except Exception as e:
+        print("Invalid angle:", angle, e)
+        return False
 
-    def _apply_command(self, command: str) -> None:
-        cmd = command.upper()
-        if cmd == "FORWARD":
-            self._servo.angle = FORWARD_ANGLE
-        elif cmd == "BACK":
-            self._servo.angle = BACK_ANGLE
-        elif cmd == "CENTER":
-            self._servo.angle = CENTER_ANGLE
+
+# ---------------------------------------
+# Parse the command string
+# ---------------------------------------
+def apply_packet(packet: str):
+    """
+    Packet example:
+    S2:45,S3:90
+    """
+
+    print("Received:", packet)
+
+    parts = packet.split(",")
+
+    for part in parts:
+        if ":" not in part:
+            print("Invalid part:", part)
+            continue
+
+        channel, value = part.split(":", 1)
+        channel = channel.strip().upper()
+        value = value.strip()
+
+        if channel == "S2":
+            if set_servo(servo1, value):
+                print(f"Servo 1 -> {value}")
+
+        elif channel == "S3":
+            if set_servo(servo2, value):
+                print(f"Servo 2 -> {value}")
+
         else:
-            self._serial.write(f"ERR {cmd}\n".encode("utf-8"))
-            print(f"Unknown command: {cmd}")
-            return
-        self._serial.write(f"OK {cmd}\n".encode("utf-8"))
-        print(f"Moved servo to {cmd.lower()}.")
-
-    def loop(self):
-        while True:
-            if self._serial.in_waiting > 0:
-                data = self._serial.read(self._serial.in_waiting)
-                if data:
-                    self._buffer.extend(data)
-                    while b"\n" in self._buffer:
-                        line, _, remainder = self._buffer.partition(b"\n")
-                        self._buffer = bytearray(remainder)
-                        try:
-                            decoded = line.decode("utf-8").strip()
-                        except UnicodeError:
-                            print("Received undecodable bytes; ignoring.")
-                            continue
-                        if decoded:
-                            self._apply_command(decoded)
-            time.sleep(0.01)
+            print("Unknown channel:", channel)
 
 
-ServoBridge().loop()
+# ---------------------------------------
+# Main Loop
+# ---------------------------------------
+while True:
+    if serial.in_waiting > 0:
+        data = serial.read(serial.in_waiting)
+        if data:
+            buffer.extend(data)
+
+            while b"\n" in buffer:
+                line, _, remainder = buffer.partition(b"\n")
+                buffer = bytearray(remainder)
+
+                try:
+                    decoded = line.decode("utf-8").strip()
+                except UnicodeError:
+                    print("Undecodable serial input")
+                    continue
+
+                if decoded:
+                    apply_packet(decoded)
+
+    time.sleep(0.01)

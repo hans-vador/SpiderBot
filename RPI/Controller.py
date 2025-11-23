@@ -2,9 +2,39 @@ from pyPS4Controller.controller import Controller
 import serial
 import threading
 import time
+import math
 
-SERIAL_PORT = "/dev/ttyACM0"  # Adjust if your Servo 2040 enumerates differently.
+SERIAL_PORT = "/dev/ttyACM0"
 BAUD_RATE = 115200
+COXA = 43
+FEMUR = 60
+TIBIA = 104
+
+class IKEngine:
+    def __init__(self):
+        self.S2Angle = 0
+        self.S3Angle = 0
+
+    def calculate(self, y, z):
+        L = math.sqrt(y**2+z**2)
+
+        J3 = math.acos((FEMUR**2 + TIBIA**2 - L**2)/(2*FEMUR*TIBIA))
+        J3 = math.degrees(J3)
+
+        B = math.acos((L**2 + FEMUR**2 - TIBIA**2)/(2*L*FEMUR))
+        B = math.degrees(B);
+
+        A = math.atan2(z, y)
+        A = math.degrees(A)
+
+        J2 = B - A
+
+        self.S2Angle = 90 - J2
+        self.S3Angle = J3
+
+        return self.S2Angle, self.S3Angle 
+        
+
 
 class MyController(Controller):
     # RME: Requirements - serial_port (optional, defaults to SERIAL_PORT), **kwargs for parent Controller
@@ -13,24 +43,37 @@ class MyController(Controller):
     #      Effects - Creates serial connection to Servo 2040, initializes controller state, 
     #                and starts background threads for serial reading and movement control
     def __init__(self, serial_port=SERIAL_PORT, **kwargs):
+        self.y = 0
+        self.z = 0
+        self.ik = IKEngine()
         super().__init__(**kwargs)
+
+        # Serial connection to Servo2040
         self.serial_port = serial_port
         self.serial_conn = serial.Serial(serial_port, BAUD_RATE, timeout=0.1)
+
+        # Stores whatever command string YOU want to send (IK output later)
         self.current_command = None
-        self.desired_command = "CENTER"
+        self.desired_command = ""  # start empty
+
+        # Lock for thread-safe access
         self._command_lock = threading.Lock()
+
+        # Background threads
         self.reader_thread = threading.Thread(target=self._serial_reader, daemon=True)
         self.reader_thread.start()
+
         self.movement_thread = threading.Thread(target=self._movement_loop, daemon=True)
         self.movement_thread.start()
+    
+    def _update_ik(self):
+        S2, S3 = self.ik.calculate(self.y, self.z)
+        self.desired_command = f"S2:{S2},S3:{S3}"
 
-    # RME: Requirements - command (str) must be a valid command string, self.serial_conn must be open
-    #      Modifies - self.current_command if command differs from current
-    #      Effects - Sends command to Servo 2040 via serial if command changed, prints status or error
+    # -------------------------------
+    # SERIAL SEND
+    # -------------------------------
     def send_command(self, command: str):
-        """
-        Send a command string to the Servo 2040 if it changed.
-        """
         if command == self.current_command:
             return
         message = f"{command}\n".encode("utf-8")
@@ -38,67 +81,70 @@ class MyController(Controller):
             self.serial_conn.write(message)
             self.serial_conn.flush()
             self.current_command = command
-            print(f"Sent command to servo: {command}")
+            print(f"Sent command: {command}")
         except serial.SerialException as exc:
-            print(f"Failed to talk to Servo 2040: {exc}")
+            print(f"Serial write failed: {exc}")
 
-    # RME: Requirements - self._command_lock and self.desired_command must exist, self.send_command must be callable
-    #      Modifies - Reads self.desired_command (with lock protection)
-    #      Effects - Continuously reads desired command and sends it to servo every 0.05 seconds (runs in background thread)
+    # -------------------------------
+    # BACKGROUND LOOP (SENDS IK PACKETS)
+    # -------------------------------
     def _movement_loop(self):
         while True:
             with self._command_lock:
-                target = self.desired_command
-            self.send_command(target)
-            time.sleep(0.05)
+                target = self.desired_command  # whatever YOU compute
+            if target:
+                self.send_command(target)
+            time.sleep(0.02)  # 50 Hz update for smooth robotics
 
-    # RME: Requirements - command (str) must be provided, self._command_lock must exist
-    #      Modifies - self.desired_command (thread-safe update using lock)
-    #      Effects - Updates the target command that will be sent to the servo in the movement loop
+    # -------------------------------
+    # SET TARGET COMMAND (IK STRING)
+    # -------------------------------
     def _set_target_command(self, command: str):
         with self._command_lock:
             self.desired_command = command
 
-    # RME: Requirements - self.serial_conn must be open and connected to Servo 2040
-    #      Modifies - Reads data from serial buffer
-    #      Effects - Continuously reads serial messages from Servo 2040, decodes and prints them (runs in background thread)
+    # -------------------------------
+    # SERIAL READER (OPTIONAL FEEDBACK)
+    # -------------------------------
     def _serial_reader(self):
         while True:
             try:
                 line = self.serial_conn.readline()
             except serial.SerialException as exc:
-                print(f"Servo 2040 serial read error: {exc}")
+                print(f"Serial read error: {exc}")
                 break
+
             if not line:
                 continue
+
             decoded = line.decode("utf-8", errors="replace").strip()
             if decoded:
                 print(f"Servo2040 -> {decoded}")
+    
 
-    # RME: Requirements - value (int) from PS4 controller L3 stick Y-axis, self._set_target_command must be callable
-    #      Modifies - self.desired_command via _set_target_command
-    #      Effects - Sets command to "FORWARD" if stick pushed up significantly (value < -10000), otherwise "CENTER"
     def on_L3_up(self, value):
         if value < -10000:
-            self._set_target_command("FORWARD")
-        else: 
-            self._set_target_command("CENTER")
+            with self._command_lock:
+                self.z += 1
+                self._update_ik()
 
-
-    # RME: Requirements - value (int) from PS4 controller L3 stick Y-axis, self._set_target_command must be callable
-    #      Modifies - self.desired_command via _set_target_command
-    #      Effects - Sets command to "BACK" if stick pushed down significantly (value > 10000), otherwise "CENTER"
     def on_L3_down(self, value):
         if value > 10000:
-            self._set_target_command("BACK")
-        else: 
-            self._set_target_command("CENTER")
+            with self._command_lock:
+                self.z -= 1
+                self._update_ik()
 
-    # RME: Requirements - PS4 controller L3 stick Y-axis at rest position, self._set_target_command must be callable
-    #      Modifies - self.desired_command via _set_target_command
-    #      Effects - Sets command to "CENTER" when L3 stick Y-axis returns to rest position
-    def on_L3_y_at_rest(self):
-        self._set_target_command("CENTER")
+    def on_L3_left(self, value):
+        if value < -10000:
+            with self._command_lock:
+                self.y -= 1
+                self._update_ik()
+
+    def on_L3_right(self, value):
+        if value > 10000:
+            with self._command_lock:
+                self.y += 1
+                self._update_ik()
 
     # Empty methods for all other controls to silence them
     def on_x_press(self): pass
@@ -123,8 +169,6 @@ class MyController(Controller):
     def on_left_arrow_press(self): pass
     def on_left_right_arrow_release(self): pass
     def on_right_arrow_press(self): pass
-    def on_L3_left(self, value): pass
-    def on_L3_right(self, value): pass
     def on_L3_x_at_rest(self): pass
     def on_L3_press(self): pass
     def on_L3_release(self): pass
