@@ -22,7 +22,7 @@ class IKEngine:
         J3 = math.degrees(J3)
 
         B = math.acos((L**2 + FEMUR**2 - TIBIA**2)/(2*L*FEMUR))
-        B = math.degrees(B);
+        B = math.degrees(B)
 
         A = math.atan2(z, y)
         A = math.degrees(A)
