@@ -7,6 +7,11 @@ SERIAL_PORT = "/dev/ttyACM0"  # Adjust if your Servo 2040 enumerates differently
 BAUD_RATE = 115200
 
 class MyController(Controller):
+    # RME: Requirements - serial_port (optional, defaults to SERIAL_PORT), **kwargs for parent Controller
+    #      Modifies - Initializes self.serial_port, self.serial_conn, self.current_command, 
+    #                 self.desired_command, self._command_lock, and starts reader_thread and movement_thread
+    #      Effects - Creates serial connection to Servo 2040, initializes controller state, 
+    #                and starts background threads for serial reading and movement control
     def __init__(self, serial_port=SERIAL_PORT, **kwargs):
         super().__init__(**kwargs)
         self.serial_port = serial_port
@@ -19,6 +24,9 @@ class MyController(Controller):
         self.movement_thread = threading.Thread(target=self._movement_loop, daemon=True)
         self.movement_thread.start()
 
+    # RME: Requirements - command (str) must be a valid command string, self.serial_conn must be open
+    #      Modifies - self.current_command if command differs from current
+    #      Effects - Sends command to Servo 2040 via serial if command changed, prints status or error
     def send_command(self, command: str):
         """
         Send a command string to the Servo 2040 if it changed.
@@ -34,6 +42,9 @@ class MyController(Controller):
         except serial.SerialException as exc:
             print(f"Failed to talk to Servo 2040: {exc}")
 
+    # RME: Requirements - self._command_lock and self.desired_command must exist, self.send_command must be callable
+    #      Modifies - Reads self.desired_command (with lock protection)
+    #      Effects - Continuously reads desired command and sends it to servo every 0.05 seconds (runs in background thread)
     def _movement_loop(self):
         while True:
             with self._command_lock:
@@ -41,10 +52,16 @@ class MyController(Controller):
             self.send_command(target)
             time.sleep(0.05)
 
+    # RME: Requirements - command (str) must be provided, self._command_lock must exist
+    #      Modifies - self.desired_command (thread-safe update using lock)
+    #      Effects - Updates the target command that will be sent to the servo in the movement loop
     def _set_target_command(self, command: str):
         with self._command_lock:
             self.desired_command = command
 
+    # RME: Requirements - self.serial_conn must be open and connected to Servo 2040
+    #      Modifies - Reads data from serial buffer
+    #      Effects - Continuously reads serial messages from Servo 2040, decodes and prints them (runs in background thread)
     def _serial_reader(self):
         while True:
             try:
@@ -58,6 +75,9 @@ class MyController(Controller):
             if decoded:
                 print(f"Servo2040 -> {decoded}")
 
+    # RME: Requirements - value (int) from PS4 controller L3 stick Y-axis, self._set_target_command must be callable
+    #      Modifies - self.desired_command via _set_target_command
+    #      Effects - Sets command to "FORWARD" if stick pushed up significantly (value < -10000), otherwise "CENTER"
     def on_L3_up(self, value):
         if value < -10000:
             self._set_target_command("FORWARD")
@@ -65,12 +85,18 @@ class MyController(Controller):
             self._set_target_command("CENTER")
 
 
+    # RME: Requirements - value (int) from PS4 controller L3 stick Y-axis, self._set_target_command must be callable
+    #      Modifies - self.desired_command via _set_target_command
+    #      Effects - Sets command to "BACK" if stick pushed down significantly (value > 10000), otherwise "CENTER"
     def on_L3_down(self, value):
         if value > 10000:
             self._set_target_command("BACK")
         else: 
             self._set_target_command("CENTER")
 
+    # RME: Requirements - PS4 controller L3 stick Y-axis at rest position, self._set_target_command must be callable
+    #      Modifies - self.desired_command via _set_target_command
+    #      Effects - Sets command to "CENTER" when L3 stick Y-axis returns to rest position
     def on_L3_y_at_rest(self):
         self._set_target_command("CENTER")
 
