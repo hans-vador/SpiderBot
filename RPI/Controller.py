@@ -8,7 +8,10 @@ SERIAL_PORT = "/dev/ttyACM0"
 BAUD_RATE = 115200
 COXA = 43
 FEMUR = 60
-TIBIA = 104
+TIBIA = 110
+
+def clamp(value, min_value, max_value):
+    return max(min_value, min(value, max_value))
 
 class IKEngine:
     def __init__(self):
@@ -16,30 +19,31 @@ class IKEngine:
         self.S3Angle = 0
 
     def calculate(self, y, z):
-        L = math.sqrt(y**2+z**2)
 
-        J3 = math.acos((FEMUR**2 + TIBIA**2 - L**2)/(2*FEMUR*TIBIA))
-        J3 = math.degrees(J3)
+        L = math.sqrt(y**2 + z**2)
 
-        B = math.acos((L**2 + FEMUR**2 - TIBIA**2)/(2*L*FEMUR))
-        B = math.degrees(B)
+        # J3
+        J3 = (FEMUR**2 + TIBIA**2 - L**2) / (2 * FEMUR * TIBIA)
+        J3 = math.degrees(math.acos(J3))
 
-        A = math.atan2(z, y)
-        A = math.degrees(A)
+        # B
+        B = (L**2 + FEMUR**2 - TIBIA**2) / (2 * L * FEMUR)
+        B = math.degrees(math.acos(B))
+
+        # A
+        A = math.degrees(math.atan2(-z, y))
 
         J2 = B - A
 
         self.S2Angle = 90 - J2
         self.S3Angle = J3
 
-        return self.S2Angle, self.S3Angle 
-        
-
+        return self.S2Angle, self.S3Angle
 
 class MyController(Controller):
     def __init__(self, serial_port=SERIAL_PORT, **kwargs):
-        self.y = 0
-        self.z = 0
+        self.y = 120
+        self.z = 50
         self.ik = IKEngine()
         super().__init__(**kwargs)
 
@@ -77,6 +81,8 @@ class MyController(Controller):
             self.serial_conn.flush()
             self.current_command = command
             print(f"Sent command: {command}")
+            print(f"Y Axis: {self.y}")
+            print(f"Z Axis: {self.z}")
         except serial.SerialException as exc:
             print(f"Serial write failed: {exc}")
 
@@ -117,28 +123,24 @@ class MyController(Controller):
                 print(f"Servo2040 -> {decoded}")
     
 
-    def on_L3_up(self, value):
-        if value < -10000:
+    def on_up_arrow_press(self):
             with self._command_lock:
-                self.z += 1
+                self.z += 5
                 self._update_ik()
 
-    def on_L3_down(self, value):
-        if value > 10000:
+    def on_down_arrow_press(self):
             with self._command_lock:
-                self.z -= 1
+                self.z -= 5
                 self._update_ik()
 
-    def on_L3_left(self, value):
-        if value < -10000:
+    def on_left_arrow_press(self):
             with self._command_lock:
-                self.y -= 1
+                self.y += 5
                 self._update_ik()
 
-    def on_L3_right(self, value):
-        if value > 10000:
+    def on_right_arrow_press(self):
             with self._command_lock:
-                self.y += 1
+                self.y -= 5
                 self._update_ik()
 
     # Empty methods for all other controls to silence them
@@ -158,15 +160,16 @@ class MyController(Controller):
     def on_R1_release(self): pass
     def on_R2_press(self, value): pass
     def on_R2_release(self): pass
-    def on_up_arrow_press(self): pass
     def on_up_down_arrow_release(self): pass
-    def on_down_arrow_press(self): pass
-    def on_left_arrow_press(self): pass
     def on_left_right_arrow_release(self): pass
-    def on_right_arrow_press(self): pass
     def on_L3_x_at_rest(self): pass
+    def on_L3_y_at_rest(self): pass
     def on_L3_press(self): pass
     def on_L3_release(self): pass
+    def on_L3_up(self, value): pass
+    def on_L3_down(self, value): pass
+    def on_L3_left(self, value): pass
+    def on_L3_right(self, value): pass
     def on_R3_up(self, value): pass
     def on_R3_down(self, value): pass
     def on_R3_left(self, value): pass
