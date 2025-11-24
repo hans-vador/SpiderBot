@@ -18,6 +18,10 @@ servo1 = servo.Servo(pwm1, min_pulse=PULSE_RANGE[0], max_pulse=PULSE_RANGE[1])
 pwm2 = pwmio.PWMOut(board.SERVO_2, frequency=PWM_FREQUENCY)
 servo2 = servo.Servo(pwm2, min_pulse=PULSE_RANGE[0], max_pulse=PULSE_RANGE[1])
 
+#Servo 3
+pwm3 = pwmio.PWMOut(board.SERVO_3, frequency=PWM_FREQUENCY)
+servo3 = servo.Servo(pwm3, min_pulse=PULSE_RANGE[0], max_pulse=PULSE_RANGE[1])
+
 # ---------------------------------------
 # Serial Setup
 # ---------------------------------------
@@ -65,13 +69,17 @@ def apply_packet(packet: str):
         channel = channel.strip().upper()
         value = value.strip()
 
-        if channel == "S2":
+        if channel == "S1":
             if set_servo(servo1, value):
                 print(f"Servo 1 -> {value}")
 
-        elif channel == "S3":
+        elif channel == "S2":
             if set_servo(servo2, value):
                 print(f"Servo 2 -> {value}")
+
+        elif channel == "S3":
+            if set_servo(servo3, value):
+                print(f"Servo 3 -> {value}")
 
         else:
             print("Unknown channel:", channel)

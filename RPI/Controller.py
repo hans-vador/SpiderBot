@@ -15,10 +15,11 @@ def clamp(value, min_value, max_value):
 
 class IKEngine:
     def __init__(self):
+        self.S1Angle = 0
         self.S2Angle = 0
         self.S3Angle = 0
 
-    def calculate(self, y, z):
+    def calculate(self, x, y, z):
 
         L = math.sqrt(y**2 + z**2)
 
@@ -34,14 +35,15 @@ class IKEngine:
         A = math.degrees(math.atan2(-z, y))
 
         J2 = B - A
-
+        self.S1Angle = 90
         self.S2Angle = 90 - J2
         self.S3Angle = J3
 
-        return self.S2Angle, self.S3Angle
+        return self.S1Angle, self.S2Angle, self.S3Angle
 
 class MyController(Controller):
     def __init__(self, serial_port=SERIAL_PORT, **kwargs):
+        self.x = 0
         self.y = 120
         self.z = 50
         self.ik = IKEngine()
@@ -66,8 +68,8 @@ class MyController(Controller):
         self.movement_thread.start()
     
     def _update_ik(self):
-        S2, S3 = self.ik.calculate(self.y, self.z)
-        self.desired_command = f"S2:{S2},S3:{S3}"
+        S1, S2, S3 = self.ik.calculate(self.x, self.y, self.z)
+        self.desired_command = f"S1:{S1},S2:{S2},S3:{S3}"
 
     # -------------------------------
     # SERIAL SEND
@@ -81,6 +83,7 @@ class MyController(Controller):
             self.serial_conn.flush()
             self.current_command = command
             print(f"Sent command: {command}")
+            print(f"X Axis: {self.x}")
             print(f"Y Axis: {self.y}")
             print(f"Z Axis: {self.z}")
         except serial.SerialException as exc:
