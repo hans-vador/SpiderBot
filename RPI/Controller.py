@@ -21,7 +21,6 @@ class IKEngine:
         self.S3Angle = 0
 
     def calculate(self, x, y, z):
-
         L = math.sqrt((x**2 + y**2) + z**2)
 
         # J3
@@ -33,15 +32,14 @@ class IKEngine:
         B = math.degrees(math.acos(B))
 
         # A
-        A = math.degrees(math.atan2(-z, y))
+        A = math.degrees(math.atan2(-z, math.sqrt(x**2+y**2)))
 
         J2 = B - A
 
         #J1
         J1 = math.degrees(math.atan(x/y))
-        J1 = 90 + J1
 
-        self.S1Angle = J1
+        self.S1Angle = 90 + J1 
         self.S2Angle = 90 - J2
         self.S3Angle = J3
 
@@ -56,7 +54,7 @@ class MyController(Controller):
         super().__init__(**kwargs)
 
         #Initial State
-        self.state = "idle"
+        self.state = "idle" # unnecessary
         self.xMultiplier = 0
         self.yMultiplier = 0
         self.zMultiplier = 0
@@ -110,11 +108,11 @@ class MyController(Controller):
             with self._command_lock:
                 target = self.desired_command  # whatever YOU compute
             
-            if self.state == "idle":
+            if self.state == "idle": # state never changes so technically this is useless
                  if target:
                       self.send_command(target)
             if self.xMultiplier != 0:
-                 self.x += self.xMultiplier * self.speed
+                 self.x += self.xMultiplier * self.speed 
                  self.moved = True
             if self.yMultiplier != 0:
                  self.y += self.yMultiplier * self.speed
