@@ -54,12 +54,12 @@ class MyController(Controller):
         super().__init__(**kwargs)
 
         #Initial State
-        self.state = "idle" # unnecessary
         self.xMultiplier = 0
         self.yMultiplier = 0
         self.zMultiplier = 0
         self.speed = 0.2
         self.moved = False
+
         # Serial connection to Servo2040
         self.serial_port = serial_port
         self.serial_conn = serial.Serial(serial_port, BAUD_RATE, timeout=0.1)
@@ -77,7 +77,10 @@ class MyController(Controller):
 
         self.movement_thread = threading.Thread(target=self._movement_loop, daemon=True)
         self.movement_thread.start()
-    
+
+    # -------------------------------
+    # Updating IKEngine Class
+    # -------------------------------
     def _update_ik(self):
         S1, S2, S3 = self.ik.calculate(self.x, self.y, self.z)
         self.desired_command = f"S1:{S1},S2:{S2},S3:{S3}"
@@ -108,9 +111,8 @@ class MyController(Controller):
             with self._command_lock:
                 target = self.desired_command  # whatever YOU compute
             
-            if self.state == "idle": # state never changes so technically this is useless
-                 if target:
-                      self.send_command(target)
+            if target:
+                self.send_command(target)
             if self.xMultiplier != 0:
                  self.x += self.xMultiplier * self.speed 
                  self.moved = True
@@ -125,15 +127,7 @@ class MyController(Controller):
                  self.send_command(target)
                  self.moved = False
                  
-            
             time.sleep(0.02)  # 50 Hz update for smooth robotics
-
-    # -------------------------------
-    # SET TARGET COMMAND (IK STRING)
-    # -------------------------------
-    def _set_target_command(self, command: str):
-        with self._command_lock:
-            self.desired_command = command
 
     # -------------------------------
     # SERIAL READER (OPTIONAL FEEDBACK)
@@ -153,42 +147,83 @@ class MyController(Controller):
             if decoded:
                 print(f"Servo2040 -> {decoded}")
     
-
+    # -------------------------------
+    # X,Y,Z Incrementing Functions:
+    # -------------------------------
     def on_up_arrow_press(self):
-            with self._command_lock:
-                self.z += 30
-                self._update_ik()
+        with self._command_lock:
+            self.z += 5
+            self._update_ik()
 
     def on_down_arrow_press(self):
-            with self._command_lock:
-                self.z -= 30
-                self._update_ik()
+        with self._command_lock:
+            self.z -= 5
+            self._update_ik()
 
     def on_left_arrow_press(self):
-            with self._command_lock:
-                self.x -= 5
-                self._update_ik()
+        with self._command_lock:
+            self.y +=5 
+            self._update_ik()
 
     def on_right_arrow_press(self):
-            with self._command_lock:
-                self.x += 5
-                self._update_ik()
+        with self._command_lock:
+            self.y -= 5
+            self._update_ik()
 
-    # Empty methods for all other controls to silence them
-    def on_x_press(self): 
-         self.speed += 0.2
-    def on_x_release(self): pass
-    def on_triangle_press(self): 
-         self.y = 45
-         self._update_ik()
-    def on_triangle_release(self): pass
     def on_circle_press(self): 
-         self.y += 5
-         self._update_ik()
-    def on_circle_release(self): pass
+        self.x += 5
+        self._update_ik()
+        
     def on_square_press(self): 
-         self.y -= 5
-         self._update_ik()
+        self.x -= 5
+        self._update_ik()
+    
+    # ----------------------------------------
+    # Variable Speed Joystick Control:
+    # ----------------------------------------
+    def on_L3_up(self, value): 
+        speed = value/-10000
+        if speed > 1:
+            self.zMultiplier = speed
+        else:
+            self.zMultiplier = 0
+
+    def on_L3_down(self, value): 
+        speed = value/-10000
+        if speed * -1 > 1:
+            self.zMultiplier = speed
+        else:
+            self.zMultiplier = 0
+
+    def on_L3_left(self, value): 
+        speed = value/10000
+        if speed * -1 > 1:
+            self.xMultiplier = speed
+        else:
+            self.xMultiplier = 0
+
+    def on_L3_right(self, value): 
+        speed = value/10000
+        if speed > 1:
+            self.xMultiplier = speed
+        else:
+            self.xMultiplier = 0
+
+    # ----------------------------------------
+    # Speed Manipulation For Joystick Control:
+    # ----------------------------------------
+    def on_triangle_press(self):
+        self.speed += 0.2
+    def on_x_press(self): 
+        self.speed -= 0.2
+
+    # ----------------------------------------
+    # Empty methods For Other Controls
+    # ----------------------------------------      
+    def on_x_release(self): pass
+    def on_triangle_press(self): pass
+    def on_triangle_release(self): pass
+    def on_circle_release(self): pass
     def on_square_release(self): pass
     def on_L1_press(self): pass
     def on_L1_release(self): pass
@@ -204,30 +239,6 @@ class MyController(Controller):
     def on_L3_y_at_rest(self): pass
     def on_L3_press(self): pass
     def on_L3_release(self): pass
-    def on_L3_up(self, value): 
-            speed = value/-10000
-            if speed > 1:
-                self.zMultiplier = speed
-            else:
-                 self.zMultiplier = 0
-    def on_L3_down(self, value): 
-            speed = value/-10000
-            if speed * -1 > 1:
-                self.zMultiplier = speed
-            else:
-                 self.zMultiplier = 0
-    def on_L3_left(self, value): 
-            speed = value/10000
-            if speed * -1 > 1:
-                self.xMultiplier = speed
-            else:
-                 self.xMultiplier = 0
-    def on_L3_right(self, value): 
-            speed = value/10000
-            if speed > 1:
-                self.xMultiplier = speed
-            else:
-                 self.xMultiplier = 0
     def on_R3_up(self, value): pass
     def on_R3_down(self, value): pass
     def on_R3_left(self, value): pass
