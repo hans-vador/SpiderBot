@@ -21,7 +21,7 @@ class IKEngine:
 
     def calculate(self, x, y, z):
 
-        L = math.sqrt(y**2 + z**2)
+        L = math.sqrt((x**2 + y**2) + z**2)
 
         # J3
         J3 = (FEMUR**2 + TIBIA**2 - L**2) / (2 * FEMUR * TIBIA)
@@ -35,7 +35,12 @@ class IKEngine:
         A = math.degrees(math.atan2(-z, y))
 
         J2 = B - A
-        self.S1Angle = 90
+
+        #J1
+        J1 = math.degrees(math.atan(x/y))
+        J1 = 90 + J1
+
+        self.S1Angle = J1
         self.S2Angle = 90 - J2
         self.S3Angle = J3
 
@@ -45,7 +50,7 @@ class MyController(Controller):
     def __init__(self, serial_port=SERIAL_PORT, **kwargs):
         self.x = 0
         self.y = 120
-        self.z = 50
+        self.z = 60
         self.ik = IKEngine()
         super().__init__(**kwargs)
 
@@ -128,22 +133,22 @@ class MyController(Controller):
 
     def on_up_arrow_press(self):
             with self._command_lock:
-                self.z += 5
+                self.z += 30
                 self._update_ik()
 
     def on_down_arrow_press(self):
             with self._command_lock:
-                self.z -= 5
+                self.z -= 30
                 self._update_ik()
 
     def on_left_arrow_press(self):
             with self._command_lock:
-                self.y += 5
+                self.x -= 5
                 self._update_ik()
 
     def on_right_arrow_press(self):
             with self._command_lock:
-                self.y -= 5
+                self.x += 5
                 self._update_ik()
 
     # Empty methods for all other controls to silence them
