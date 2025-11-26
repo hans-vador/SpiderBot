@@ -164,10 +164,10 @@ class MyController(Controller):
             self.serial_conn.write(message)
             self.serial_conn.flush()
             self.current_command = command
-            print(f"Sent command: {command}")
-            print(f"X Axis: {self.L1.position.x}")
-            print(f"Y Axis: {self.L1.position.y}")
-            print(f"Z Axis: {self.L1.position.z}")
+            #print(f"Sent command: {command}")
+            #print(f"X Axis: {self.L1.position.x}")
+            #print(f"Y Axis: {self.L1.position.y}")
+            #print(f"Z Axis: {self.L1.position.z}")
         except serial.SerialException as exc:
             print(f"Serial write failed: {exc}")
 
@@ -195,6 +195,12 @@ class MyController(Controller):
                  self.moved = False
             
             if self.gaiting == True:
+                if self.L1.limitSwitch.is_pressed and self.L1.target == Point(45, 75, self.L1.leveledZ):
+                    self.L1.leveledZ = self.L1.position.z
+                    self.L1.gaitCurrent = Point(*self.L1.position.__dict__.values())
+                    self.L1.target = Point(-35, 75, self.L1.leveledZ)
+                    print(self.L1.leveledZ)
+                    time.sleep(0.02)
                 self.gait(self.L1, 50, Point(45, 75, self.L1.leveledZ), Point(-35, 75, self.L1.leveledZ))
                 self._update_ik(self.L1)
             time.sleep(0.02)  # 50 Hz update for smooth robotics
@@ -226,15 +232,8 @@ class MyController(Controller):
         leg.position.y += increment.y
         leg.position.z += increment.z
 
-
-        if leg.target == gaitEnd and self.L1.limitSwitch.is_pressed:
-            leg.target = gaitStart
-            leg.gaitCurrent = Point(*leg.position.__dict__.values())
-            leg.leveledZ = -30
-
-
         # Check cycle transitions
-        elif leg.position.distance_to(leg.target) < threshold:
+        if leg.position.distance_to(leg.target) < threshold:
 
             if leg.target == gaitEnd:
                 leg.gaitCurrent = Point(*leg.position.__dict__.values())
@@ -268,7 +267,8 @@ class MyController(Controller):
 
             decoded = line.decode("utf-8", errors="replace").strip()
             if decoded:
-                print(f"Servo2040 -> {decoded}")
+                #print(f"Servo2040 -> {decoded}")
+                x = 0
             
     
     # -------------------------------
