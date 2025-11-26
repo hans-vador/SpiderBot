@@ -107,6 +107,7 @@ class Leg:
         self.gaiting = False
         self.limitSwitch = Button(GPIO, pull_up=True)
         self.leveledZ = -60
+        self.tryLevel = False
 
     def __repr__(self):
         return f"Leg(name='{self.name}', position={self.position})"
@@ -164,10 +165,10 @@ class MyController(Controller):
             self.serial_conn.write(message)
             self.serial_conn.flush()
             self.current_command = command
-            #print(f"Sent command: {command}")
-            #print(f"X Axis: {self.L1.position.x}")
-            #print(f"Y Axis: {self.L1.position.y}")
-            #print(f"Z Axis: {self.L1.position.z}")
+            print(f"Sent command: {command}")
+            print(f"X Axis: {self.L1.position.x}")
+            print(f"Y Axis: {self.L1.position.y}")
+            print(f"Z Axis: {self.L1.position.z}")
         except serial.SerialException as exc:
             print(f"Serial write failed: {exc}")
 
@@ -195,13 +196,14 @@ class MyController(Controller):
                  self.moved = False
             
             if self.gaiting == True:
-                if self.L1.limitSwitch.is_pressed and self.L1.target == Point(45, 75, self.L1.leveledZ):
-                    self.L1.leveledZ = self.L1.position.z
-                    self.L1.gaitCurrent = Point(*self.L1.position.__dict__.values())
-                    self.L1.target = Point(-35, 75, self.L1.leveledZ)
-                    print(self.L1.leveledZ)
+                if self.L1.target == Point(45, 75, self.L1.leveledZ):
+                    if self.L1.limitSwitch.is_pressed:
+                        self.L1.leveledZ = self.L1.position.z
+                        self.L1.gaitCurrent = Point(*self.L1.position.__dict__.values())
+                        self.L1.target = Point(-35, 75, self.L1.leveledZ)
+        
                     time.sleep(0.02)
-                self.gait(self.L1, 50, Point(45, 75, self.L1.leveledZ), Point(-35, 75, self.L1.leveledZ))
+                self.gait(self.L1, 25, Point(45, 75, -60), Point(-35, 75, self.L1.leveledZ))
                 self._update_ik(self.L1)
             time.sleep(0.02)  # 50 Hz update for smooth robotics
 
@@ -218,26 +220,40 @@ class MyController(Controller):
             leg.target = gaitEnd
             leg.gaitCurrent = Point(leg.position.x, leg.position.y, leg.position.z)
             leg.midpoint = gaitEnd.midpoint(gaitStart)
-            leg.midpoint.z += 50
+            leg.midpoint.z = leg.leveledZ + 50
             leg.gaiting = True
 
         threshold = 3
+
+        if leg.target == gaitStart:
+            speed = speed*2
 
         # Compute increment
         increment = leg.target - leg.gaitCurrent
         increment = increment / speed
 
         # Update POSITION IN PLACE
-        leg.position.x += increment.x
-        leg.position.y += increment.y
-        leg.position.z += increment.z
+        if leg.tryLevel:
+            leg.position.z -= 1
+            if leg.limitSwitch.is_pressed:
+                leg.tryLevel = False
+                leg.gaitCurrent = Point(*leg.position.__dict__.values())
+                leg.target = gaitStart
+        else:
+            leg.position.x += increment.x
+            leg.position.y += increment.y
+            leg.position.z += increment.z
 
         # Check cycle transitions
         if leg.position.distance_to(leg.target) < threshold:
 
             if leg.target == gaitEnd:
-                leg.gaitCurrent = Point(*leg.position.__dict__.values())
-                leg.target = gaitStart
+                if leg.limitSwitch.is_pressed:
+                    leg.tryLevel = False
+                    leg.gaitCurrent = Point(*leg.position.__dict__.values())
+                    leg.target = gaitStart
+                else:
+                    leg.tryLevel = True
                 
 
             elif leg.target == gaitStart:
