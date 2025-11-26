@@ -88,6 +88,7 @@ def apply_packet(packet: str):
         if channel == "LEG":
             pinOffset = pinOffsets[value]
             print(f"Leg:{value}, Offset:{pinOffset}")
+            continue
 
         if channel == "S1":
             if set_servo(servos[pinOffset + 1], value):
