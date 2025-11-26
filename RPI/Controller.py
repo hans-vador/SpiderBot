@@ -3,6 +3,10 @@ import serial
 import threading
 import time
 import math
+from gpiozero import Button
+
+#GPIO TESTING
+
 
 SERIAL_PORT = "/dev/ttyACM0"
 BAUD_RATE = 115200
@@ -45,7 +49,6 @@ class IKEngine:
 
         return self.S1Angle, self.S2Angle, self.S3Angle
 
-import math
 
 class Point:
     def __init__(self, x=0.0, y=0.0, z=0.0):
@@ -96,12 +99,14 @@ class Point:
 
 
 class Leg:
-    def __init__(self, name: str, point: Point):
+    def __init__(self, name: str, point: Point, GPIO: int):
         self.name = name
         self.position = point
         self.target = self.position
         self.gaitCurrent = self.position
         self.gaiting = False
+        self.limitSwitch = Button(GPIO, pull_up=True)
+        self.leveledZ = -60
 
     def __repr__(self):
         return f"Leg(name='{self.name}', position={self.position})"
@@ -119,10 +124,9 @@ class MyController(Controller):
         self.speed = 0.2
         self.moved = False
         self.state = "idle"
-
         self.gaiting = False
 
-        self.L1 = Leg("L1", Point(0, 120, 0))
+        self.L1 = Leg("L1", Point(0, 120, 0), 17)
 
         # Serial connection to Servo2040
         self.serial_port = serial_port
@@ -191,7 +195,7 @@ class MyController(Controller):
                  self.moved = False
             
             if self.gaiting == True:
-                self.gait(self.L1, 100, Point(45, 75, -60), Point(-35, 75, -60))
+                self.gait(self.L1, 50, Point(45, 75, self.L1.leveledZ), Point(-35, 75, self.L1.leveledZ))
                 self._update_ik(self.L1)
             time.sleep(0.02)  # 50 Hz update for smooth robotics
 
@@ -223,23 +227,29 @@ class MyController(Controller):
         leg.position.z += increment.z
 
 
+        if leg.target == gaitEnd and self.L1.limitSwitch.is_pressed:
+            leg.target = gaitStart
+            leg.gaitCurrent = Point(*leg.position.__dict__.values())
+            leg.leveledZ = -30
+
+
         # Check cycle transitions
-        if leg.position.distance_to(leg.target) < threshold:
+        elif leg.position.distance_to(leg.target) < threshold:
 
             if leg.target == gaitEnd:
                 leg.gaitCurrent = Point(*leg.position.__dict__.values())
                 leg.target = gaitStart
-                print("gaitEnd → gaitStart")
+                
 
             elif leg.target == gaitStart:
                 leg.gaitCurrent = Point(*leg.position.__dict__.values())
                 leg.target = leg.midpoint
-                print("gaitStart → midpoint")
+                
 
             elif leg.target == leg.midpoint:
                 leg.gaitCurrent = Point(*leg.position.__dict__.values())
                 leg.target = gaitEnd
-                print("midpoint → gaitEnd")
+                
 
 
     # -------------------------------
