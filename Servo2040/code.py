@@ -24,15 +24,15 @@ servo3 = servo.Servo(pwm3, min_pulse=PULSE_RANGE[0], max_pulse=PULSE_RANGE[1])
 
 #Servo 10
 pwm10 = pwmio.PWMOut(board.SERVO_10, frequency=PWM_FREQUENCY)
-servo10 = servo.Servo(pwm3, min_pulse=PULSE_RANGE[0], max_pulse=PULSE_RANGE[1])
+servo10 = servo.Servo(pwm10, min_pulse=PULSE_RANGE[0], max_pulse=PULSE_RANGE[1])
 
 #Servo 11
 pwm11 = pwmio.PWMOut(board.SERVO_11, frequency=PWM_FREQUENCY)
-servo11 = servo.Servo(pwm3, min_pulse=PULSE_RANGE[0], max_pulse=PULSE_RANGE[1])
+servo11 = servo.Servo(pwm11, min_pulse=PULSE_RANGE[0], max_pulse=PULSE_RANGE[1])
 
 #Servo 12
 pwm12 = pwmio.PWMOut(board.SERVO_12, frequency=PWM_FREQUENCY)
-servo12 = servo.Servo(pwm3, min_pulse=PULSE_RANGE[0], max_pulse=PULSE_RANGE[1])
+servo12 = servo.Servo(pwm12, min_pulse=PULSE_RANGE[0], max_pulse=PULSE_RANGE[1])
 
 # ---------------------------------------
 # Serial Setup
