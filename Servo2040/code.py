@@ -85,7 +85,7 @@ def apply_packet(packet: str):
         value = value.strip()
         
 
-        if channel == "Leg":
+        if channel == "LEG":
             pinOffset = pinOffsets[value]
             print(f"Leg:{value}, Offset:{pinOffset}")
 
