@@ -31,6 +31,20 @@ buffer = bytearray()
 print("IK Servo Bridge Ready")
 print("Expected packet format: S2:ANGLE,S3:ANGLE")
 
+servos = {
+    1: servo1,
+    2: servo2,
+    3: servo3
+}
+
+pinOffsets = {
+    "L1": 0,
+    "L2": 3,
+    "L3": 6,
+    "R1": 9,
+    "R2": 13,
+    "R3": 16
+}
 
 # ---------------------------------------
 # Helper: Apply angle safely
@@ -59,7 +73,8 @@ def apply_packet(packet: str):
     print("Received:", packet)
 
     parts = packet.split(",")
-
+    pinOffset = 0
+    
     for part in parts:
         if ":" not in part:
             print("Invalid part:", part)
@@ -68,17 +83,22 @@ def apply_packet(packet: str):
         channel, value = part.split(":", 1)
         channel = channel.strip().upper()
         value = value.strip()
+        
+
+        if channel == "Leg":
+            pinOffset = pinOffsets[value]
+            print(f"Leg:{value}, Offset:{pinOffset}")
 
         if channel == "S1":
-            if set_servo(servo1, value):
+            if set_servo(servos[pinOffset + 1], value):
                 print(f"Servo 1 -> {value}")
 
         elif channel == "S2":
-            if set_servo(servo2, value):
+            if set_servo(servos[pinOffset + 2], value):
                 print(f"Servo 2 -> {value}")
 
         elif channel == "S3":
-            if set_servo(servo3, value):
+            if set_servo(servos[pinOffset + 3], value):
                 print(f"Servo 3 -> {value}")
 
         else:
