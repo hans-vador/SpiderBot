@@ -81,9 +81,9 @@ class MyController(Controller):
     # -------------------------------
     # Updating IKEngine Class
     # -------------------------------
-    def _update_ik(self):
+    def _update_ik(self, leg):
         S1, S2, S3 = self.ik.calculate(self.x, self.y, self.z)
-        self.desired_command = f"S1:{S1},S2:{S2},S3:{S3}"
+        self.desired_command = f"Leg:{leg},S1:{S1},S2:{S2},S3:{S3}"
 
     # -------------------------------
     # SERIAL SEND
@@ -123,12 +123,14 @@ class MyController(Controller):
                  self.z += self.zMultiplier * self.speed
                  self.moved = True
             if self.moved:
-                 self._update_ik()
+                 self._update_ik("L1")
                  self.send_command(target)
                  self.moved = False
                  
             time.sleep(0.02)  # 50 Hz update for smooth robotics
 
+    def moveLeg(self, leg, xOffset, yOffet, zOffset):
+        print()
     # -------------------------------
     # SERIAL READER (OPTIONAL FEEDBACK)
     # -------------------------------
@@ -153,30 +155,30 @@ class MyController(Controller):
     def on_up_arrow_press(self):
         with self._command_lock:
             self.z += 5
-            self._update_ik()
+            self._update_ik("L1")
 
     def on_down_arrow_press(self):
         with self._command_lock:
             self.z -= 5
-            self._update_ik()
+            self._update_ik("L1")
 
     def on_left_arrow_press(self):
         with self._command_lock:
             self.y +=5 
-            self._update_ik()
+            self._update_ik("L1")
 
     def on_right_arrow_press(self):
         with self._command_lock:
             self.y -= 5
-            self._update_ik()
+            self._update_ik("L1")
 
     def on_circle_press(self): 
         self.x += 5
-        self._update_ik()
+        self._update_ik("L1")
         
     def on_square_press(self): 
         self.x -= 5
-        self._update_ik()
+        self._update_ik("L1")
     
     # ----------------------------------------
     # Variable Speed Joystick Control:
@@ -228,11 +230,15 @@ class MyController(Controller):
     def on_L1_press(self): pass
     def on_L1_release(self): pass
     def on_L2_press(self, value): pass
-    def on_L2_release(self): pass
+    def on_L2_release(self): 
+        self.x -= 5
+        self._update_ik()
     def on_R1_press(self): pass
     def on_R1_release(self): pass
     def on_R2_press(self, value): pass
-    def on_R2_release(self): pass
+    def on_R2_release(self): 
+        self.x += 5
+        self._update_ik()
     def on_up_down_arrow_release(self): pass
     def on_left_right_arrow_release(self): pass
     def on_L3_x_at_rest(self): pass
