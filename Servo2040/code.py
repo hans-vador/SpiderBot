@@ -22,6 +22,18 @@ servo2 = servo.Servo(pwm2, min_pulse=PULSE_RANGE[0], max_pulse=PULSE_RANGE[1])
 pwm3 = pwmio.PWMOut(board.SERVO_3, frequency=PWM_FREQUENCY)
 servo3 = servo.Servo(pwm3, min_pulse=PULSE_RANGE[0], max_pulse=PULSE_RANGE[1])
 
+#Servo 10
+pwm10 = pwmio.PWMOut(board.SERVO_10, frequency=PWM_FREQUENCY)
+servo10 = servo.Servo(pwm3, min_pulse=PULSE_RANGE[0], max_pulse=PULSE_RANGE[1])
+
+#Servo 11
+pwm11 = pwmio.PWMOut(board.SERVO_11, frequency=PWM_FREQUENCY)
+servo11 = servo.Servo(pwm3, min_pulse=PULSE_RANGE[0], max_pulse=PULSE_RANGE[1])
+
+#Servo 12
+pwm12 = pwmio.PWMOut(board.SERVO_12, frequency=PWM_FREQUENCY)
+servo12 = servo.Servo(pwm3, min_pulse=PULSE_RANGE[0], max_pulse=PULSE_RANGE[1])
+
 # ---------------------------------------
 # Serial Setup
 # ---------------------------------------
@@ -34,7 +46,10 @@ print("Expected packet format: S2:ANGLE,S3:ANGLE")
 servos = {
     1: servo1,
     2: servo2,
-    3: servo3
+    3: servo3,
+    10: servo10,
+    11: servo11,
+    12: servo12
 }
 
 pinOffsets = {
