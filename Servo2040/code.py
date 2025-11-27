@@ -69,10 +69,10 @@ print("Expected packet format: S2:ANGLE,S3:ANGLE")
 
 
 legServos = {
-    "L1": {servo1, servo2, servo3},
-    "R1": {servo4, servo5, servo6},
-    "L3": {servo7, servo8, servo9},
-    "R3": {servo10, servo11, servo12}
+    "L1": [servo1, servo2, servo3],
+    "R1": [servo4, servo5, servo6],
+    "L3": [servo7, servo8, servo9],
+    "R3": [servo10, servo11, servo12]
 }
 
 # ---------------------------------------
