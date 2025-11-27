@@ -22,6 +22,18 @@ servo2 = servo.Servo(pwm2, min_pulse=PULSE_RANGE[0], max_pulse=PULSE_RANGE[1])
 pwm3 = pwmio.PWMOut(board.SERVO_3, frequency=PWM_FREQUENCY)
 servo3 = servo.Servo(pwm3, min_pulse=PULSE_RANGE[0], max_pulse=PULSE_RANGE[1])
 
+# Servo 1
+pwm4 = pwmio.PWMOut(board.SERVO_4, frequency=PWM_FREQUENCY)
+servo4 = servo.Servo(pwm4, min_pulse=PULSE_RANGE[0], max_pulse=PULSE_RANGE[1])
+
+# Servo 2
+pwm5 = pwmio.PWMOut(board.SERVO_5, frequency=PWM_FREQUENCY)
+servo5 = servo.Servo(pwm5, min_pulse=PULSE_RANGE[0], max_pulse=PULSE_RANGE[1])
+
+#Servo 6
+pwm6 = pwmio.PWMOut(board.SERVO_6, frequency=PWM_FREQUENCY)
+servo6 = servo.Servo(pwm6, min_pulse=PULSE_RANGE[0], max_pulse=PULSE_RANGE[1])
+
 #Servo 7
 pwm7 = pwmio.PWMOut(board.SERVO_7, frequency=PWM_FREQUENCY)
 servo7 = servo.Servo(pwm7, min_pulse=PULSE_RANGE[0], max_pulse=PULSE_RANGE[1])
@@ -46,17 +58,6 @@ servo11 = servo.Servo(pwm11, min_pulse=PULSE_RANGE[0], max_pulse=PULSE_RANGE[1])
 pwm12 = pwmio.PWMOut(board.SERVO_12, frequency=PWM_FREQUENCY)
 servo12 = servo.Servo(pwm12, min_pulse=PULSE_RANGE[0], max_pulse=PULSE_RANGE[1])
 
-#Servo 16
-pwm16 = pwmio.PWMOut(board.SERVO_16, frequency=PWM_FREQUENCY)
-servo16 = servo.Servo(pwm16, min_pulse=PULSE_RANGE[0], max_pulse=PULSE_RANGE[1])
-
-#Servo 17
-pwm17 = pwmio.PWMOut(board.SERVO_17, frequency=PWM_FREQUENCY)
-servo17 = servo.Servo(pwm17, min_pulse=PULSE_RANGE[0], max_pulse=PULSE_RANGE[1])
-
-#Servo 18
-pwm18 = pwmio.PWMOut(board.SERVO_18, frequency=PWM_FREQUENCY)
-servo18 = servo.Servo(pwm18, min_pulse=PULSE_RANGE[0], max_pulse=PULSE_RANGE[1])
 # ---------------------------------------
 # Serial Setup
 # ---------------------------------------
@@ -66,28 +67,12 @@ buffer = bytearray()
 print("IK Servo Bridge Ready")
 print("Expected packet format: S2:ANGLE,S3:ANGLE")
 
-servos = {
-    1: servo1,
-    2: servo2,
-    3: servo3,
-    7: servo7,
-    8: servo8,
-    9: servo9,
-    10: servo10,
-    11: servo11,
-    12: servo12,
-    16: servo16,
-    17: servo17,
-    18: servo18
-}
 
-pinOffsets = {
-    "L1": 0,
-    "L2": 3,
-    "L3": 6,
-    "R1": 9,
-    "R2": 13,
-    "R3": 16
+legServos = {
+    "L1": {servo1, servo2, servo3},
+    "R1": {servo4, servo5, servo6},
+    "L3": {servo7, servo8, servo9},
+    "R3": {servo10, servo11, servo12}
 }
 
 # ---------------------------------------
@@ -117,7 +102,7 @@ def apply_packet(packet: str):
     print("Received:", packet)
 
     parts = packet.split(",")
-    pinOffset = 0
+    leg = "none"
     
     for part in parts:
         if ":" not in part:
@@ -130,20 +115,20 @@ def apply_packet(packet: str):
         
 
         if channel == "LEG":
-            pinOffset = pinOffsets[value]
-            print(f"Leg:{value}, Offset:{pinOffset}")
+            leg = value
+            print(f"Leg:{value}")
             continue
 
         if channel == "S1":
-            if set_servo(servos[pinOffset + 1], value):
+            if set_servo(legServos[leg][0], value):
                 print(f"Servo 1 -> {value}")
 
         elif channel == "S2":
-            if set_servo(servos[pinOffset + 2], value):
+            if set_servo(legServos[leg][1], value):
                 print(f"Servo 2 -> {value}")
 
         elif channel == "S3":
-            if set_servo(servos[pinOffset + 3], value):
+            if set_servo(legServos[leg][2], value):
                 print(f"Servo 3 -> {value}")
 
         else:
