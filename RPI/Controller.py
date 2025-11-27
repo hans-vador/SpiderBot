@@ -24,7 +24,7 @@ class IKEngine:
         self.S2Angle = 0
         self.S3Angle = 0
 
-    def calculate(self, x, y, z):
+    def calculate(self, name, x, y, z):
         L = math.sqrt((x**2 + y**2) + z**2)
 
         # J3
@@ -43,9 +43,16 @@ class IKEngine:
         #J1
         J1 = math.degrees(math.atan(x/y))
 
-        self.S1Angle = 90 + J1 
-        self.S2Angle = 90 - J2
-        self.S3Angle = J3
+        
+        if name == "L1":
+            self.S1Angle = 90 + J1 
+            self.S2Angle = 90 - J2
+            self.S3Angle = J3
+        if name == "R1":
+            self.S1Angle = 90 + J1 
+            self.S2Angle = 90 + J2
+            self.S3Angle = 180 - J3
+        
 
         return self.S1Angle, self.S2Angle, self.S3Angle
 
@@ -128,6 +135,7 @@ class MyController(Controller):
         self.gaiting = False
 
         self.L1 = Leg("L1", Point(0, 120, 0), 17)
+        self.R1 = Leg("R1", Point(0, 120, 0), 23)
 
         # Serial connection to Servo2040
         self.serial_port = serial_port
@@ -151,8 +159,8 @@ class MyController(Controller):
     # Updating IKEngine Class
     # -------------------------------
     def _update_ik(self, leg):
-        S1, S2, S3 = self.ik.calculate(leg.position.x, leg.position.y, leg.position.z)
-        self.desired_command = f"LEG:{leg.name},S1:{S1},S2:{S2},S3:{S3}"
+        S1, S2, S3 = self.ik.calculate(leg.name, leg.position.x, leg.position.y, leg.position.z)
+        self.desired_command = f"LEG:{leg.name},S1:{90},S2:{90},S3:{90}"
 
     # -------------------------------
     # SERIAL SEND
@@ -181,7 +189,7 @@ class MyController(Controller):
                 target = self.desired_command  # whatever YOU compute
             
             if target:
-                self.send_command(target)
+                x=0
             if self.xMultiplier != 0:
                  self.L1.position.x += self.xMultiplier * self.speed 
                  self.moved = True
@@ -196,15 +204,21 @@ class MyController(Controller):
                  self.moved = False
             
             if self.gaiting == True:
-                if self.L1.target == Point(45, 75, self.L1.leveledZ):
+                """if self.L1.target == Point(45, 75, self.L1.leveledZ):
                     if self.L1.limitSwitch.is_pressed:
                         self.L1.leveledZ = self.L1.position.z
                         self.L1.gaitCurrent = Point(*self.L1.position.__dict__.values())
                         self.L1.target = Point(-35, 75, self.L1.leveledZ)
+                if self.L1.tryLevel:
+                    self.L1.leveledZ = self.L1.position.z
         
-                    time.sleep(0.02)
-                self.gait(self.L1, 25, Point(45, 75, -60), Point(-35, 75, self.L1.leveledZ))
+                    time.sleep(0.02)"""
+                self.gait(self.L1, 25, Point(45, 75, -60), Point(-45, 75, -60))
                 self._update_ik(self.L1)
+                self.send_command(self.desired_command)
+                self.gait(self.R1, 25, Point(-45, 75, -60), Point(45, 75, -60))
+                self._update_ik(self.R1)
+                self.send_command(self.desired_command)
             time.sleep(0.02)  # 50 Hz update for smooth robotics
 
     def moveLeg(self, leg, xOffset, yOffet, zOffset):
@@ -253,7 +267,9 @@ class MyController(Controller):
                     leg.gaitCurrent = Point(*leg.position.__dict__.values())
                     leg.target = gaitStart
                 else:
-                    leg.tryLevel = True
+                    #leg.tryLevel = True
+                    leg.gaitCurrent = Point(*leg.position.__dict__.values())
+                    leg.target = gaitStart
                 
 
             elif leg.target == gaitStart:
@@ -283,8 +299,8 @@ class MyController(Controller):
 
             decoded = line.decode("utf-8", errors="replace").strip()
             if decoded:
-                #print(f"Servo2040 -> {decoded}")
-                x = 0
+                print(f"Servo2040 -> {decoded}")
+                
             
     
     # -------------------------------
@@ -292,31 +308,31 @@ class MyController(Controller):
     # -------------------------------
     def on_up_arrow_press(self):
         with self._command_lock:
-            self.L1.position.z += 5
-            self._update_ik(self.L1)
+            self.R1.position.z += 5
+            self._update_ik(self.R1)
 
     def on_down_arrow_press(self):
         with self._command_lock:
-            self.L1.position.z -= 5
-            self._update_ik(self.L1)
+            self.R1.position.z -= 5
+            self._update_ik(self.R1)
 
     def on_left_arrow_press(self):
         with self._command_lock:
-            self.L1.position.y +=5 
-            self._update_ik(self.L1)
+            self.R1.position.y +=5 
+            self._update_ik(self.R1)
 
     def on_right_arrow_press(self):
         with self._command_lock:
-            self.L1.position.y -= 5
-            self._update_ik(self.L1)
+            self.R1.position.y -= 5
+            self._update_ik(self.R1)
 
     def on_circle_press(self): 
-        self.L1.position.x += 5
-        self._update_ik(self.L1)
+        self.R1.position.x += 5
+        self._update_ik(self.R1)
         
     def on_square_press(self): 
-        self.L1.position.x -= 5
-        self._update_ik(self.L1)
+        self.R1.position.x -= 5
+        self._update_ik(self.R1)
     
     # ----------------------------------------
     # Variable Speed Joystick Control:
@@ -369,8 +385,8 @@ class MyController(Controller):
     def on_L1_release(self): pass
     def on_L2_press(self, value): pass
     def on_L2_release(self): 
-        self.L1.position.x -= 5
-        self._update_ik(self.L1)
+        self.R1.position.x -= 5
+        self._update_ik(self.R1)
     def on_R1_press(self): 
         self.gaiting = True
     def on_R1_release(self): 
@@ -380,8 +396,8 @@ class MyController(Controller):
         self.L1.gaitCurrent = self.L1.position
     def on_R2_press(self, value): pass
     def on_R2_release(self): 
-        self.L1.position.x += 5
-        self._update_ik(self.L1)
+        self.R1.position.x += 5
+        self._update_ik(self.R1)
     def on_up_down_arrow_release(self): pass
     def on_left_right_arrow_release(self): pass
     def on_L3_x_at_rest(self): pass
