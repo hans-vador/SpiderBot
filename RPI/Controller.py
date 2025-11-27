@@ -44,11 +44,11 @@ class IKEngine:
         J1 = math.degrees(math.atan(x/y))
 
         
-        if name == "L1":
+        if name == "L1" or name == "L3":
             self.S1Angle = 90 + J1 
             self.S2Angle = 90 - J2
             self.S3Angle = J3
-        if name == "R1":
+        if name == "R1" or name == "R3":
             self.S1Angle = 90 + J1 
             self.S2Angle = 90 + J2
             self.S3Angle = 180 - J3
@@ -135,7 +135,9 @@ class MyController(Controller):
         self.gaiting = False
 
         self.L1 = Leg("L1", Point(0, 120, 0), 17)
+        self.L3 = Leg("L3", Point(0, 120, 0), 22)
         self.R1 = Leg("R1", Point(0, 120, 0), 23)
+        self.R3 = Leg("R3", Point(0, 120, 0), 25)
 
         # Serial connection to Servo2040
         self.serial_port = serial_port
@@ -160,7 +162,7 @@ class MyController(Controller):
     # -------------------------------
     def _update_ik(self, leg):
         S1, S2, S3 = self.ik.calculate(leg.name, leg.position.x, leg.position.y, leg.position.z)
-        self.desired_command = f"LEG:{leg.name},S1:{90},S2:{90},S3:{90}"
+        self.desired_command = f"LEG:{leg.name},S1:{S1},S2:{S2},S3:{S3}"
 
     # -------------------------------
     # SERIAL SEND
@@ -216,8 +218,17 @@ class MyController(Controller):
                 self.gait(self.L1, 25, Point(45, 75, -60), Point(-45, 75, -60))
                 self._update_ik(self.L1)
                 self.send_command(self.desired_command)
+
+                self.gait(self.L3, 25, Point(45, 75, -60), Point(-45, 75, -60))
+                self._update_ik(self.L3)
+                self.send_command(self.desired_command)
+
                 self.gait(self.R1, 25, Point(-45, 75, -60), Point(45, 75, -60))
                 self._update_ik(self.R1)
+                self.send_command(self.desired_command)
+
+                self.gait(self.R3, 25, Point(45, 75, -60), Point(-45, 75, -60))
+                self._update_ik(self.R3)
                 self.send_command(self.desired_command)
             time.sleep(0.02)  # 50 Hz update for smooth robotics
 
