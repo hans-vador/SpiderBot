@@ -1,9 +1,15 @@
 import math
 class Point:
     def __init__(self, x=0.0, y=0.0, z=0.0):
-        self.x = float(x)
-        self.y = float(y)
-        self.z = float(z)
+        # Copy constructor: Point(existing_point)
+        if isinstance(x, Point):
+            self.x = float(x.x)
+            self.y = float(x.y)
+            self.z = float(x.z)
+        else:
+            self.x = float(x)
+            self.y = float(y)
+            self.z = float(z)
 
     def distance_to(self, other):
         dx = self.x - other.x
@@ -36,6 +42,14 @@ class Point:
     # Pretty print
     def __repr__(self):
         return f"Point({self.x}, {self.y}, {self.z})"
+    
+    def __mul__(self, num):
+        return Point(self.x * num, self.y * num, self.z * num)
+
+    def __rmul__(self, num):
+        return self.__mul__(num)
+
+
 
     def __eq__(self, other):
         if not isinstance(other, Point):

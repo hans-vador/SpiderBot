@@ -53,6 +53,10 @@ class MyController(Controller):
 
         self.triangle = 1
 
+        self.idle = True
+        self.load = False
+        self.jump = False
+
         # Serial connection to Servo2040
         self.serial_port = serial_port
         self.serial_conn = serial.Serial(serial_port, BAUD_RATE, timeout=0.1)
@@ -103,94 +107,29 @@ class MyController(Controller):
         while True:
             with self._command_lock:
                 target = self.desired_command  # whatever YOU compute
-            
-            if self.state == "idle":
-                if self.changedState:
-                    for leg in self.legs:
-                        #leg.position = Point(self.idlePoint.x, self.idlePoint.y, self.idlePoint.z)
-                        self._update_ik(leg)
-                        self.send_command(self.desired_command)
-                    self.changedState = False
-
-                if self.L3Vertical != 0 or self.L3Horizontal != 0:
-                    self.state = "walk" 
-                    self.changedState = True
-                elif self.triangle == -1:
-                    self.state = "controlLeg"
-                    self.changedState = True
-                elif self.R3Vertical != 0 or self.R3Horizontal != 0:
-                    self.state = "flex"
-                    self.changedState = True
-                
-            elif self.state == "flex":
-                self.L1.position.z += (self.R3Vertical - self.R3Horizontal) * self.speed
-                self._update_ik(self.L1)
-                self.send_command(self.desired_command)
-
-                self.R1.position.z += (self.R3Vertical + self.R3Horizontal) * self.speed
-                self._update_ik(self.R1)
-                self.send_command(self.desired_command)
-
-                self.L3.position.z -= (self.R3Vertical + self.R3Horizontal) * self.speed
-                self._update_ik(self.L3)
-                self.send_command(self.desired_command)
-
-                self.R3.position.z -= (self.R3Vertical - self.R3Horizontal) * self.speed
-                self._update_ik(self.R3)
-                self.send_command(self.desired_command)
-
-                if self.R3Vertical == 0 and self.R3Horizontal == 0:
-                    self.state = "idle"
-                    self.changedState = True
-
-            elif self.state == "walk":
-
-                gaitEnd = Point(45, 75, -60)
-                gaitStart = Point(-45, 75, -60)
-                if self.changedState:
-                    for leg in self.legs:
-                        #leg.position = Point(self.idlePoint.x, self.idlePoint.y, self.idlePoint.z)
-                        #self._update_ik(leg)
-                        #self.send_command(self.desired_command)
-                        x=0
-                    self.changedState = False
+            if self.idle:
                 for leg in self.legs:
-                    with self._command_lock:
-                        if leg.name == "L1" or leg.name == "L3":
-                            self.gait(leg, 25, gaitEnd, gaitStart, "upperMid")
-                            self._update_ik(leg)
-                            self.send_command(self.desired_command)
-                        elif leg.name == "R1" or leg.name == "R3":
-                            self.gait(leg, 25, gaitStart, gaitEnd, "lowerMid")
-                            self._update_ik(leg)
-                            self.send_command(self.desired_command)
-
-
-
-                if self.L3Vertical == 0 and self.L3Horizontal == 0:
-                    for leg in self.legs:
-                        
-                        leg.gaiting = False
-                        leg.target = leg.position
-                        leg.gaitCurrent = leg.position
-                    
-                    self.state = "idle" 
-                    self.changedState = True
-
-            elif self.state == "controlLeg":
+                    leg.position = Point(self.idlePoint.x, self.idlePoint.y, self.idlePoint.z)
+                    self._update_ik(leg)
+                    self.send_command(self.desired_command)
+                self.idle = False
+            elif self.load:
+                time.sleep(0.3)
+                for leg in self.legs:
+                    leg.position = Point(0, 25, -54)
+                    self._update_ik(leg)
+                    self.send_command(self.desired_command)
+                self.load = False
+            elif self.jump:
+                for leg in self.legs:
+                    leg.position = Point(0, 40, -150)
+                    self._update_ik(leg)
+                    self.send_command(self.desired_command)
+                self.load = True
+                self.jump = False
                 
-                if self.L3Vertical != 0 or self.L3Horizontal != 0 or self.arrow != 0:
-                    with self._command_lock:
-                        self.legs[self.currentLeg].position.x += self.L3Horizontal * self.speed
-                        self.legs[self.currentLeg].position.y += self.arrow * self.speed
-                        self.legs[self.currentLeg].position.z += self.L3Vertical * self.speed
+        
             
-                        self._update_ik(self.legs[self.currentLeg])
-                        self.send_command(self.desired_command)
-
-                elif self.triangle == 1:
-                    self.state = "idle"
-                    self.changedState = True
             time.sleep(0.02)  # 50 Hz update for smooth robotics
 
     def moveLeg(self, leg, xOffset, yOffet, zOffset):
@@ -199,30 +138,20 @@ class MyController(Controller):
         self.L1.position.z += zOffset
         self._update_ik(leg)
     
-    def gait(self, leg, speed, gaitEnd, gaitStart, gaitInitialTarget):
+    def gait(self, leg, speed, gaitEnd, gaitStart):
 
         # START gait
         if not leg.gaiting:
-            
+            leg.target = gaitEnd
             leg.gaitCurrent = Point(leg.position.x, leg.position.y, leg.position.z)
-            leg.upperMid = gaitEnd.midpoint(gaitStart)
-            leg.lowerMid = gaitEnd.midpoint(gaitStart)
-            leg.upperMid.z = leg.leveledZ + 50
+            leg.midpoint = gaitEnd.midpoint(gaitStart)
+            leg.midpoint.z = leg.leveledZ + 50
             leg.gaiting = True
-
-            if gaitInitialTarget == "start":
-                leg.target = Point(gaitStart)
-            elif gaitInitialTarget == "upperMid":
-                leg.target = Point(leg.upperMid)
-            elif gaitInitialTarget == "end":
-                leg.target = Point(gaitEnd)
-            elif gaitInitialTarget == "lowerMid":
-                leg.target = Point(leg.lowerMid)
-
 
         threshold = 3
 
-        
+        if leg.target == gaitStart:
+            speed = speed*2
 
         # Compute increment
         increment = leg.target - leg.gaitCurrent
@@ -234,7 +163,7 @@ class MyController(Controller):
             if leg.limitSwitch.is_pressed:
                 leg.tryLevel = False
                 leg.gaitCurrent = Point(*leg.position.__dict__.values())
-                leg.target = Point(gaitStart)
+                leg.target = gaitStart
         else:
             leg.position.x += increment.x
             leg.position.y += increment.y
@@ -247,24 +176,21 @@ class MyController(Controller):
                 if 0 == 0:
                     leg.tryLevel = False
                     leg.gaitCurrent = Point(*leg.position.__dict__.values())
-                    leg.target = Point(leg.lowerMid)
+                    leg.target = gaitStart
                 else:
                     #leg.tryLevel = True
                     leg.gaitCurrent = Point(*leg.position.__dict__.values())
-                    leg.target = Point(leg.lowerMid)
+                    leg.target = gaitStart
                 
-            elif leg.target == leg.lowerMid:
-                leg.gaitCurrent = Point(*leg.position.__dict__.values())
-                leg.target = Point(gaitStart)
 
             elif leg.target == gaitStart:
                 leg.gaitCurrent = Point(*leg.position.__dict__.values())
-                leg.target = Point(leg.upperMid)
+                leg.target = leg.midpoint
                 
 
-            elif leg.target == leg.upperMid:
+            elif leg.target == leg.midpoint:
                 leg.gaitCurrent = Point(*leg.position.__dict__.values())
-                leg.target = Point(gaitEnd)
+                leg.target = gaitEnd
                 
 
 
@@ -387,12 +313,15 @@ class MyController(Controller):
     # ----------------------------------------
     # Empty methods For Other Controls
     # ----------------------------------------      
-    def on_x_release(self): pass
+    def on_x_release(self): 
+        self.jump = True
     def on_triangle_release(self): 
         if self.state == "idle" or self.state == "controlLeg":
             self.triangle = self.triangle * -1
-    def on_circle_release(self): pass
-    def on_square_release(self): pass
+    def on_circle_release(self): 
+        self.load = True
+    def on_square_release(self): 
+        self.idle = True
     def on_L1_press(self): pass
     def on_L1_release(self): 
         if self.state == "controlLeg":
