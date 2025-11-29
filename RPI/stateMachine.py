@@ -75,7 +75,8 @@ class MyController(Controller):
     # Updating IKEngine Class
     # -------------------------------
     def _update_ik(self, leg):
-        S1, S2, S3 = self.ik.calculate(leg.name, leg.position.x, leg.position.y, leg.position.z)
+        x_leg, y_leg, z_leg = self.body_to_leg_frame(leg)
+        S1, S2, S3 = self.ik.calculate(leg.name, x_leg, y_leg, z_leg)
         self.desired_command = f"LEG:{leg.name},S1:{S1},S2:{S2},S3:{S3}"
 
     # -------------------------------
@@ -161,7 +162,7 @@ class MyController(Controller):
                             self._update_ik(leg)
                             self.send_command(self.desired_command)
                         elif leg.name == "R1" or leg.name == "R3":
-                            self.gait(leg, 25, gaitStart, gaitEnd, "lowerMid")
+                            self.gait(leg, 25, gaitStart, gaitEnd, "upperMid")
                             self._update_ik(leg)
                             self.send_command(self.desired_command)
 
@@ -265,6 +266,26 @@ class MyController(Controller):
             elif leg.target == leg.upperMid:
                 leg.gaitCurrent = Point(*leg.position.__dict__.values())
                 leg.target = Point(gaitEnd)
+
+    def body_to_leg_frame(self, leg):
+    # angle of this leg relative to body x-axis
+        if leg.name in ("L3", "R1"):       # front-left & front-right
+            theta_deg = 45
+        elif leg.name in ("L1", "R3"):     # rear-left & rear-right
+            theta_deg = -45
+        else:
+            theta_deg = 0
+
+        theta = math.radians(theta_deg)
+        c = math.cos(theta)
+        s = math.sin(theta)
+
+        # Rotate body vector into leg frame: v_leg = R(-theta) * v_body
+        x_leg =  leg.position.x * c + leg.position.y * s
+        y_leg = -leg.position.x * s + leg.position.y * c
+        z_leg =  leg.position.z
+
+        return x_leg, y_leg, z_leg
                 
 
 
