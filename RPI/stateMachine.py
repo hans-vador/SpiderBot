@@ -34,12 +34,15 @@ class MyController(Controller):
 
         self.idlePointL3R1 = Point(-35, 35, -70)
         self.idlePointL1R3 = Point(35, 35, -70)
+        self.idlePointL2R2 = Point(0, 50, -70)
         self.L1 = Leg("L1", self.idlePointL1R3, 17)
         self.L3 = Leg("L3", self.idlePointL3R1, 22)
         self.R1 = Leg("R1", self.idlePointL3R1, 23)
         self.R3 = Leg("R3", self.idlePointL1R3, 25)
+        self.L2 = Leg("L2", self.idlePointL2R2, 27)
 
-        self.legs = [self.L1, self.R1, self.R3, self.L3]
+
+        self.legs = [self.L1, self.R1, self.R3, self.L3, self.L2]
         self.currentLeg = 0
 
         self.changedState = True
