@@ -28,11 +28,11 @@ class IKEngine:
         J1 = math.degrees(math.atan(x/y))
 
         
-        if name == "L1" or name == "L3":
+        if name == "L1" or name == "L2" or name == "L3":
             self.S1Angle = 90 + J1 
             self.S2Angle = 90 - J2
             self.S3Angle = J3
-        if name == "R1" or name == "R3":
+        if name == "R1" or name == "R2" or name == "R3":
             self.S1Angle = 90 + J1 
             self.S2Angle = 90 + J2
             self.S3Angle = 180 - J3

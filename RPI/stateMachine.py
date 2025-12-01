@@ -34,15 +34,17 @@ class MyController(Controller):
 
         self.idlePointL3R1 = Point(-35, 35, -70)
         self.idlePointL1R3 = Point(35, 35, -70)
-        self.idlePointL2R2 = Point(0, 50, -70)
+        self.idlePointL2R2 = Point(0, 100,  -70)
         self.L1 = Leg("L1", self.idlePointL1R3, 17)
         self.L3 = Leg("L3", self.idlePointL3R1, 22)
         self.R1 = Leg("R1", self.idlePointL3R1, 23)
         self.R3 = Leg("R3", self.idlePointL1R3, 25)
         self.L2 = Leg("L2", self.idlePointL2R2, 27)
+        self.R2 = Leg("R2", self.idlePointL2R2, 27)
 
 
-        self.legs = [self.L1, self.R1, self.R3, self.L3, self.L2]
+
+        self.legs = [self.L1, self.R1, self.R3, self.L3, self.L2, self.R2]
         self.currentLeg = 0
 
         self.changedState = True
@@ -95,9 +97,9 @@ class MyController(Controller):
             self.serial_conn.flush()
             self.current_command = command
             print(f"Sent command: {command}")
-            print(f"X Axis: {self.L1.position.x}")
-            print(f"Y Axis: {self.L1.position.y}")
-            print(f"Z Axis: {self.L1.position.z}")
+            print(f"X Axis: {self.legs[self.currentLeg].position.x}")
+            print(f"Y Axis: {self.legs[self.currentLeg].position.y}")
+            print(f"Z Axis: {self.legs[self.currentLeg].position.z}")
         except serial.SerialException as exc:
             print(f"Serial write failed: {exc}")
 
@@ -144,16 +146,26 @@ class MyController(Controller):
                 self._update_ik(self.R3)
                 self.send_command(self.desired_command)
 
+                self.L2.position.z += (-self.R3Horizontal) * self.speed
+                self._update_ik(self.L2)
+                self.send_command(self.desired_command)
+
+                self.R2.position.z -= (-self.R3Horizontal) * self.speed
+                self._update_ik(self.R2)
+                self.send_command(self.desired_command)
+
                 if self.R3Vertical == 0 and self.R3Horizontal == 0:
                     self.state = "idle"
                     self.changedState = True
 
             elif self.state == "walk":
 
-                gaitEndL1R3 = Point(130, 60, -60)
-                gaitStartL1R3 = Point(25, 45, -60)
-                gaitEndL3R1 = Point(-25, 45, -60)
-                gaitStartL3R1 = Point(-130, 60, -60)
+                gaitEndL1R3 = Point(100, 45, -130)
+                gaitStartL1R3 = Point(25, 45, -90)
+                gaitEndL3R1 = Point(-25, 45, -90)
+                gaitStartL3R1 = Point(-100, 45, -130) #end
+                gaitEndL2R2 = Point(40, 50, -60)
+                gaitStartL2R2 = Point(-40, 50, -60)
                 if self.changedState:
                     for leg in self.legs:
                         #leg.position = Point(self.idlePoint.x, self.idlePoint.y, self.idlePoint.z)
@@ -177,6 +189,14 @@ class MyController(Controller):
                             self.send_command(self.desired_command)
                         elif leg.name == "R1":
                             self.gait(leg, 50, gaitStartL3R1, gaitEndL3R1, "lowerMid")
+                            self._update_ik(leg)
+                            self.send_command(self.desired_command)
+                        elif leg.name == "L2":
+                            self.gait(leg, 50, gaitEndL2R2, gaitStartL2R2, "lowerMid")
+                            self._update_ik(leg)
+                            self.send_command(self.desired_command) 
+                        elif leg.name == "R2":
+                            self.gait(leg, 50, gaitStartL2R2, gaitEndL2R2, "lowerMid")
                             self._update_ik(leg)
                             self.send_command(self.desired_command) 
 

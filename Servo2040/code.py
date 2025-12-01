@@ -70,6 +70,18 @@ servo14 = servo.Servo(pwm14, min_pulse=PULSE_RANGE[0], max_pulse=PULSE_RANGE[1])
 pwm15 = pwmio.PWMOut(board.SERVO_15, frequency=PWM_FREQUENCY)
 servo15 = servo.Servo(pwm15, min_pulse=PULSE_RANGE[0], max_pulse=PULSE_RANGE[1])
 
+#Servo 16
+pwm16 = pwmio.PWMOut(board.SERVO_16, frequency=PWM_FREQUENCY)
+servo16 = servo.Servo(pwm16, min_pulse=PULSE_RANGE[0], max_pulse=PULSE_RANGE[1])
+
+#Servo 17
+pwm17 = pwmio.PWMOut(board.SERVO_17, frequency=PWM_FREQUENCY)
+servo17 = servo.Servo(pwm17, min_pulse=PULSE_RANGE[0], max_pulse=PULSE_RANGE[1])
+
+#Servo 18
+pwm18 = pwmio.PWMOut(board.SERVO_18, frequency=PWM_FREQUENCY)
+servo18 = servo.Servo(pwm18, min_pulse=PULSE_RANGE[0], max_pulse=PULSE_RANGE[1])
+
 # ---------------------------------------
 # Serial Setup
 # ---------------------------------------
@@ -85,7 +97,8 @@ legServos = {
     "R1": [servo4, servo5, servo6],
     "L3": [servo7, servo8, servo9],
     "R3": [servo10, servo11, servo12],
-    "L2": [servo13, servo14, servo15]
+    "L2": [servo13, servo14, servo15],
+    "R2": [servo16, servo17, servo18]
 }
 
 # ---------------------------------------
