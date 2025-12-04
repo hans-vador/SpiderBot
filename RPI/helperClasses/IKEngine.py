@@ -9,14 +9,22 @@ class IKEngine:
         self.S3Angle = 0
 
     def calculate(self, name, x, y, z):
+
         L = math.sqrt((x**2 + y**2) + z**2)
+        if L > (FEMUR + TIBIA):
+            L = FEMUR + TIBIA  # fully stretched
+
+        if L < abs(FEMUR - TIBIA):
+            L = abs(FEMUR - TIBIA)  # fully folded
 
         # J3
         J3 = (FEMUR**2 + TIBIA**2 - L**2) / (2 * FEMUR * TIBIA)
+        J3 = max(-1.0, min(1.0, J3))
         J3 = math.degrees(math.acos(J3))
 
         # B
         B = (L**2 + FEMUR**2 - TIBIA**2) / (2 * L * FEMUR)
+        B = max(-1.0, min(1.0, B))
         B = math.degrees(math.acos(B))
 
         # A
@@ -25,7 +33,7 @@ class IKEngine:
         J2 = B - A
 
         #J1
-        J1 = math.degrees(math.atan(x/y))
+        J1 = math.degrees(math.atan2(x,y))
 
         
         if name == "L1" or name == "L2" or name == "L3":
