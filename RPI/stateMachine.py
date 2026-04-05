@@ -4,18 +4,20 @@ import threading
 import time
 import math
 
+import RPi.GPIO as GPIO
 from helperClasses.Point import Point
 from helperClasses.IKEngine import IKEngine
 from helperClasses.Leg import Leg
 
 #GPIO TESTING
-
+GPIO.setmode(GPIO.BCM)
+GPIO.setup(17, GPIO.OUT)
+p = GPIO.PWM(17, 50)
+p.ChangeDutyCycle(12)  # sends approx 180° command
 
 SERIAL_PORT = "/dev/ttyACM0"
 BAUD_RATE = 115200
 SPEED = 0.2
-
-
 
         
 class MyController(Controller):
@@ -448,7 +450,7 @@ class MyController(Controller):
                 elif self.triangle == 1:
                     self.state = "idle"
                     self.changedState = True
-            time.sleep(0.02)  # 50 Hz update for smooth robotics
+            time.sleep(0.06)  # 50 Hz update for smooth robotics
 
     def moveLeg(self, leg, xOffset, yOffet, zOffset):
         self.L1.position.x += xOffset
@@ -731,7 +733,8 @@ class MyController(Controller):
             if self.currentLeg < 0:
                 self.currentLeg = len(self.legs) - 1
             print(self.currentLeg)
-    def on_L2_press(self, value): pass
+    def on_L2_press(self, value):
+        p.ChangeDutyCycle(12)  # sends approx 180° command
     def on_L2_release(self): pass
     def on_R1_press(self): pass
         #self.gaiting = True
@@ -746,7 +749,9 @@ class MyController(Controller):
         self.L1.gaiting = False
         self.L1.target = self.L1.position
         self.L1.gaitCurrent = self.L1.position"""
-    def on_R2_press(self, value): pass
+    def on_R2_press(self, value):
+        p.start(1)  # sends approx 0° command
+
     def on_R2_release(self): pass
     def on_left_right_arrow_release(self): pass
     def on_L3_x_at_rest(self): pass
