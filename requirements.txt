@@ -1,0 +1,16 @@
+# Python dependencies for the Raspberry Pi side of SpiderBot (everything under RPI/).
+#
+#   pip install -r requirements.txt
+#
+# Create the venv with --system-site-packages (see docs/SETUP.md) so the GPIO
+# libraries that Raspberry Pi OS ships via apt stay visible inside the venv.
+# The Servo 2040 firmware under Servo2040/ needs nothing from this file.
+
+pyPS4Controller>=1.2.4   # DualShock 4 input via /dev/input/js0   (stateMachine.py, jumpTest.py, legacy/)
+pyserial>=3.5            # USB serial link to the Servo 2040        (stateMachine.py, jumpTest.py, legacy/)
+RPi.GPIO>=0.7.1          # pincer servo PWM on GPIO 17             (stateMachine.py, tools/Pincer.py)
+gpiozero>=2.0            # limit-switch input                       (tools/GPIOTest.py, legacy/Controller.py)
+
+# Raspberry Pi 5 / recent kernels: if "import RPi.GPIO" raises a RuntimeError,
+# swap in the drop-in replacement instead:
+#   pip uninstall RPi.GPIO && pip install rpi-lgpio
